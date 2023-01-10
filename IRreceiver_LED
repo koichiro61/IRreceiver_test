@@ -44,24 +44,6 @@ void setup() {
   Serial.println(IR_RECEIVE_PIN);
 }
 
-
-//+=============================================================================
-// Dump out the decode_results structure.
-//
-void dumpInfo() {
-  // Check if the buffer overflowed
-  if (IrReceiver.results.overflow) {
-    Serial.println("IR code too long. Edit IRremoteInt.h and increase RAW_BUFFER_LENGTH");
-    return;
-  }
-
-  IrReceiver.printResultShort(&Serial);
-
-  Serial.print(" (");
-  Serial.print(IrReceiver.results.bits, DEC);
-  Serial.println(" bits)");
-}
-
 //+=============================================================================
 // The repeating section of the code
 //
@@ -70,7 +52,7 @@ void loop() {
     Serial.println(results.value, HEX);
 
     if (results.value == UP_BUTTON) {
-      analogWrite(LED_GREEN_ANALOG_PIN, 0); // I'd better to make a subroutine ...
+      analogWrite(LED_GREEN_ANALOG_PIN, 0); // I had to make a subroutine ...
       delay(LED_DURATION);
       analogWrite(LED_GREEN_ANALOG_PIN, 255);
     } else if (results.value == DOWN_BUTTON) {
