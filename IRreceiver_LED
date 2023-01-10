@@ -1,0 +1,96 @@
+#include <IRremote.h>
+
+//------------------------------------------------------------------------------
+// Tell IRremote which Arduino pin is connected to the IR Receiver 
+//
+#if defined(ESP32)
+int IR_RECEIVE_PIN = 15;
+#else
+int IR_RECEIVE_PIN = 11;
+#endif
+IRrecv IrReceiver(IR_RECEIVE_PIN);
+decode_results results;
+
+// RGB LED (Anode common) 
+const int LED_RED_ANALOG_PIN    = 17;
+const int LED_BLUE_ANALOG_PIN   = 16;
+const int LED_GREEN_ANALOG_PIN  = 15;
+
+// For the remote controller that came with "firesteck TV 4K"
+const uint32_t UP_BUTTON    = 0x20DF40BF;
+const uint32_t DOWN_BUTTON  = 0x20DFC03F;
+const uint32_t MUTE_BUTTON  = 0x20DF906F;
+const uint32_t POWER_BUTTON = 0x20DF10EF;
+
+const int LED_DURATION  = 200;
+const int LOOP_DELAY    = 10;
+//+=============================================================================
+// Configure the Arduino
+//
+void setup() {
+  pinMode(LED_BUILTIN, OUTPUT);
+
+  Serial.begin(115200);   // Status message will be sent to PC at 9600 baud
+#if defined(__AVR_ATmega32U4__) || defined(SERIAL_USB) || defined(SERIAL_PORT_USBVIRTUAL)
+  delay(2000); // To be able to connect Serial monitor after reset and before first printout
+#endif
+  // Just to know which program is running on my Arduino
+  Serial.println(F("START " __FILE__ " from " __DATE__));
+
+  IrReceiver.enableIRIn();  // Start the receiver
+  IrReceiver.blink13(true); // Enable feedback LED
+
+  Serial.print(F("Ready to receive IR signals at pin "));
+  Serial.println(IR_RECEIVE_PIN);
+}
+
+
+//+=============================================================================
+// Dump out the decode_results structure.
+//
+void dumpInfo() {
+  // Check if the buffer overflowed
+  if (IrReceiver.results.overflow) {
+    Serial.println("IR code too long. Edit IRremoteInt.h and increase RAW_BUFFER_LENGTH");
+    return;
+  }
+
+  IrReceiver.printResultShort(&Serial);
+
+  Serial.print(" (");
+  Serial.print(IrReceiver.results.bits, DEC);
+  Serial.println(" bits)");
+}
+
+//+=============================================================================
+// The repeating section of the code
+//
+void loop() {
+  if (IrReceiver.decode(&results)) {  // Grab an IR code
+    Serial.println(results.value, HEX);
+
+    if (results.value == UP_BUTTON) {
+      analogWrite(LED_GREEN_ANALOG_PIN, 0); // I'd better to make a subroutine ...
+      delay(LED_DURATION);
+      analogWrite(LED_GREEN_ANALOG_PIN, 255);
+    } else if (results.value == DOWN_BUTTON) {
+      analogWrite(LED_BLUE_ANALOG_PIN, 0);
+      delay(LED_DURATION);
+      analogWrite(LED_BLUE_ANALOG_PIN, 255);
+    } else if (results.value == MUTE_BUTTON) {
+      analogWrite(LED_RED_ANALOG_PIN, 96);
+      analogWrite(LED_GREEN_ANALOG_PIN, 96);
+      delay(LED_DURATION);
+      analogWrite(LED_RED_ANALOG_PIN, 255);
+      analogWrite(LED_GREEN_ANALOG_PIN, 255);
+    } else if (results.value == POWER_BUTTON) {
+      analogWrite(LED_RED_ANALOG_PIN, 0);
+      delay(LED_DURATION);
+      analogWrite(LED_RED_ANALOG_PIN, 255);
+    }
+
+    delay(LOOP_DELAY);
+
+    IrReceiver.resume();                            // Prepare for the next value
+  }
+}
